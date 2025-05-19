@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CompilerVis: Mini Compiler</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #eef1f6;
+    }
+    .hero {
+      background: linear-gradient(90deg, #6a11cb, #2575fc);
+      color: white;
+      text-align: center;
+      padding: 80px 20px;
+      border-radius: 0 0 30px 30px;
+    }
+    .hero h1 {
+      font-size: 3.2em;
+      margin-bottom: 10px;
+    }
+    .hero p {
+      font-size: 1.1em;
+      margin-top: 5px;
+    }
+    .btn {
+      margin-top: 25px;
+      background: white;
+      color: #2575fc;
+      padding: 14px 28px;
+      font-size: 1em;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease-in-out;
+    }
+    .btn:hover {
+      background-color: #f2f2f2;
+    }
+    .section {
+      background-color: white;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 40px 30px;
+      border-radius: 20px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #333;
+      font-size: 1.8em;
+    }
+    .section p, label {
+      color: #555;
+      line-height: 1.6;
+    }
+    ul {
+      color: #444;
+      padding-left: 20px;
+    }
+    #output {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+    svg {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hero">
+    <h1>✨ CompilerVis: Your own compiler tutor! ✨</h1>
+    <p>Type code, compile it, and understand how compilers work — live in your browser!</p>
+  </div>
+
+  <div class="section">
+    <h2>Try It Yourself</h2>
+    <label for="codeInput">Enter arithmetic expression:</label>
+    <textarea id="codeInput" rows="3" placeholder="e.g. (2 + 3) * 4"></textarea>
+    <button class="btn" onclick="startCompiler()">Simulate</button>
+    <div id="output"></div>
+    <svg id="treeSvg" width="800" height="400"></svg>
+  </div>
+
+  <div class="section">
+    <h2>About This Project</h2>
+    <p>CompilerVis is a web-based compiler visualization tool built using Python, Flask, and PLY. It helps students understand compiler internals by simulating each stage — lexical analysis, parsing, and optional evaluation — with clear and interactive visualizations.</p>
+  </div>
+
+  <div class="section">
+    <h2>Key Features</h2>
+    <ul>
+      <li>Tokenizer and syntax highlighter</li>
+      <li>Parser to build syntax trees</li>
+      <li>SVG-based syntax tree visualizer</li>
+      <li>Expression evaluator for simple arithmetic</li>
+      <li>Explanatory tooltips for each stage</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>System Flow</h2>
+    <p>The architecture consists of these main components:</p>
+    <ul>
+      <li><strong>Input Module</strong>: Accepts arithmetic expressions</li>
+      <li><strong>Lexer Module</strong>: Tokenizes the expression</li>
+      <li><strong>Parser Module</strong>: Builds syntax tree</li>
+      <li><strong>AST Visualizer</strong>: Displays tree structure</li>
+      <li><strong>Evaluator</strong>: Computes result</li>
+      <li><strong>Explanation UI</strong>: Shows tooltips and learning content</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Outcome</h2>
+    <p>The tool will be an easy-to-use, interactive educational resource that breaks down compiler concepts for students. Each stage will include clear feedback and graphical representations.</p>
+  </div>
+
+  <script>
+    function drawTree(node, svg, x = 400, y = 40, spacing = 120) {
+      svg.innerHTML = ''; // Clear previous tree
+      const namespace = "http://www.w3.org/2000/svg";
+      let nodeId = 0;
+
+      function draw(n, x, y, depth = 0) {
+        const group = document.createElementNS(namespace, "g");
+
+        const circle = document.createElementNS(namespace, "circle");
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", y);
+        circle.setAttribute("r", 18);
+        circle.setAttribute("fill", "#2575fc");
+
+        const text = document.createElementNS(namespace, "text");
+        text.setAttribute("x", x);
+        text.setAttribute("y", y + 5);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("fill", "white");
+        text.setAttribute("font-size", "14px");
+        text.textContent = n.op || n.num || '';
+
+        group.appendChild(circle);
+        group.appendChild(text);
+        svg.appendChild(group);
+
+        if (n.left) {
+          const leftX = x - spacing / (depth + 1);
+          const leftY = y + 80;
+          const line = document.createElementNS(namespace, "line");
+          line.setAttribute("x1", x);
+          line.setAttribute("y1", y);
+          line.setAttribute("x2", leftX);
+          line.setAttribute("y2", leftY);
+          line.setAttribute("stroke", "black");
+          svg.appendChild(line);
+          draw(n.left, leftX, leftY, depth + 1);
+        }
+
+        if (n.right) {
+          const rightX = x + spacing / (depth + 1);
+          const rightY = y + 80;
+          const line = document.createElementNS(namespace, "line");
+          line.setAttribute("x1", x);
+          line.setAttribute("y1", y);
+          line.setAttribute("x2", rightX);
+          line.setAttribute("y2", rightY);
+          line.setAttribute("stroke", "black");
+          svg.appendChild(line);
+          draw(n.right, rightX, rightY, depth + 1);
+        }
+      }
+
+      draw(node, x, y);
+    }
+
+    function startCompiler() {
+      const code = document.getElementById("codeInput").value;
+      fetch("/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code })
+      })
+        .then(res => res.json())
+        .then(data => {
+          const output = document.getElementById("output");
+          if (data.error) {
+            output.innerText = "Error: " + data.error;
+            return;
+          }
+          output.innerText =
+            "Tokens:\n" + JSON.stringify(data.tokens, null, 2) +
+            "\n\nSyntax Tree:\n" + JSON.stringify(data.tree, null, 2) +
+            (data.result !== null ? ("\n\nResult:\n" + data.result) : "");
+
+          const svg = document.getElementById("treeSvg");
+          if (data.tree) drawTree(data.tree, svg);
+        })
+        .catch(err => {
+          document.getElementById("output").innerText = "Error: " + err;
+        });
+    }
+  </script>
+</body>
+</html>
